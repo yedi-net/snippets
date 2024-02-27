@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BSC Wallet Balance</title>
+<title>Visual Balance Counter</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -16,13 +16,14 @@
 </style>
 </head>
 <body>
-    <h1>BSC Wallet Balance</h1>
+    <h1>Visual Balance Counter</h1>
     <div id="balance"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.5.0/web3.min.js"></script>
     <script>
         // Contract ABI and Token Address (USDT for example)
-        const decimals = 9;
+        let lastBalance = 0;
+        const decimals = 9n;
         const duration = 5000;
         const walletAddress = "0xc736cA3d9b1E90Af4230BD8F9626528B3D4e0Ee0";
         const contractABI = [
@@ -35,41 +36,47 @@
             
         // Function to fetch balance from BSC wallet
         async function fetchBalance(walletAddress) {
-            const balance = await web3Contract.methods.balanceOf(walletAddress) / Math.pow(10, decimals);
-            return balance;
+            const balanceOf = await web3Contract.methods.balanceOf(walletAddress).call()
+            const balance = balanceOf / 10n ** decimals
+            return Number(balance);
+        }
+
+        // Format balance with decimal and thousand separators
+        function formatBalance(balance) {
+            return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(balance);
         }
 
         // Function to update balance and initiate animation
         async function updateBalance() {
             const balance = await fetchBalance(walletAddress);
             const balanceElement = document.getElementById('balance');
-            balanceElement.textContent = balance.toFixed(2);
-            animateCounting(balanceElement, balance);
-        }
+            const startValue = lastBalance;
+            lastBalance = balance;
 
-        // Function to animate counting effect
-        function animateCounting(element, targetValue) {
-            const fps = 30;
-            const frameDuration = 1000 / fps;
-            const totalFrames = duration / frameDuration;
-            const valueIncrement = (targetValue - parseFloat(element.textContent)) / totalFrames;
-            let currentValue = parseFloat(element.textContent);
-            let frame = 0;
-            const interval = setInterval(() => {
-                currentValue += valueIncrement;
-                element.textContent = currentValue.toFixed(2);
-                frame++;
-                if (frame >= totalFrames) {
-                    clearInterval(interval);
+            const increment = (balance - startValue) / (duration / 1000); // Calculate increment per millisecond
+
+            let startTime = null;
+
+            function updateAnimation(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsedTime = timestamp - startTime;
+                const newValue = startValue + increment * elapsedTime;
+                balanceElement.textContent = formatBalance(newValue);
+
+                if (elapsedTime < duration) {
+                    requestAnimationFrame(updateAnimation);
+                } else {
+                    balanceElement.textContent = formatBalance(balance);
                 }
-            }, frameDuration);
+            }
+
+            requestAnimationFrame(updateAnimation);
+
+            setTimeout(updateBalance, duration);
         }
 
         // Initial update
         updateBalance();
-
-        // Schedule periodic updates
-        setInterval(updateBalance, duration);
     </script>
 </body>
 </html>
