@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BSC Wallet Balance</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+    }
+    #balance {
+        font-family: monospace;
+        font-size: 20px;
+    }
+</style>
+</head>
+<body>
+    <h1>BSC Wallet Balance</h1>
+    <div id="balance"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.5.0/web3.min.js"></script>
+    <script>
+        // Contract ABI and Token Address (USDT for example)
+        const decimals = 9;
+        const duration = 5000;
+        const walletAddress = "0xc736cA3d9b1E90Af4230BD8F9626528B3D4e0Ee0";
+        const contractABI = [
+            {"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+        ];
+        const tokenAddress = '0xc748673057861a797275CD8A068AbB95A902e8de'; // Replace with your token address
+
+        const web3 = new Web3("https://bsc-dataseed1.binance.org")
+        const web3Contract = new web3.eth.Contract(contractABI, tokenAddress);
+            
+        // Function to fetch balance from BSC wallet
+        async function fetchBalance(walletAddress) {
+            const balance = await web3Contract.methods.balanceOf(walletAddress) / Math.pow(10, decimals);
+            return balance;
+        }
+
+        // Function to update balance and initiate animation
+        async function updateBalance() {
+            const balance = await fetchBalance(walletAddress);
+            const balanceElement = document.getElementById('balance');
+            balanceElement.textContent = balance.toFixed(2);
+            animateCounting(balanceElement, balance);
+        }
+
+        // Function to animate counting effect
+        function animateCounting(element, targetValue) {
+            const fps = 30;
+            const frameDuration = 1000 / fps;
+            const totalFrames = duration / frameDuration;
+            const valueIncrement = (targetValue - parseFloat(element.textContent)) / totalFrames;
+            let currentValue = parseFloat(element.textContent);
+            let frame = 0;
+            const interval = setInterval(() => {
+                currentValue += valueIncrement;
+                element.textContent = currentValue.toFixed(2);
+                frame++;
+                if (frame >= totalFrames) {
+                    clearInterval(interval);
+                }
+            }, frameDuration);
+        }
+
+        // Initial update
+        updateBalance();
+
+        // Schedule periodic updates
+        setInterval(updateBalance, duration);
+    </script>
+</body>
+</html>
